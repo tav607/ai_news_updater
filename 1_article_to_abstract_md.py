@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import time
 from threading import Lock
 from pathlib import Path
+import re
 
 try:
     from openai import OpenAI
@@ -87,16 +88,54 @@ def generate_abstract_from_article(client, model_id, article_path, batch_idx, pr
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": article_content},
                 ],
-                max_tokens=500,
                 temperature=0.5
             )
-            md_text = completion.choices[0].message.content
-            
-            # 如果返回文本不是以 # 开头，则截去 # 之前的部分
-            if not md_text.startswith('#'):
+            # 无调试输出，保持日志干净
+            # 兼容不同提供方在 content 字段的返回（可能为 str 或 list[{"type":"text","text":...}])
+            choice = completion.choices[0]
+            msg = choice.message
+            md_text = getattr(msg, "content", None)
+            if isinstance(md_text, list):
+                try:
+                    md_text = "".join([
+                        (part.get("text") if isinstance(part, dict) else getattr(part, "text", ""))
+                        for part in md_text
+                    ])
+                except Exception:
+                    # 兜底：转为 dict 再取
+                    data = completion.model_dump() if hasattr(completion, "model_dump") else {}
+                    parts = (
+                        data.get("choices", [{}])[0]
+                        .get("message", {})
+                        .get("content", [])
+                    )
+                    md_text = "".join([p.get("text", "") for p in parts if isinstance(p, dict)])
+            elif md_text is None:
+                # 兜底处理 None
+                data = completion.model_dump() if hasattr(completion, "model_dump") else {}
+                val = (
+                    data.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content")
+                )
+                if isinstance(val, list):
+                    md_text = "".join([p.get("text", "") for p in val if isinstance(p, dict)])
+                else:
+                    md_text = (val or "")
+
+            # 规范化输出：
+            # 1) 去除可能的代码块围栏 ``` 或 ```markdown
+            if md_text.strip().startswith("```"):
+                # 去掉首尾围栏
+                md_text = re.sub(r"^```[a-zA-Z]*\n?", "", md_text.strip())
+                md_text = re.sub(r"\n?```\s*$", "", md_text)
+            # 2) 如果包含 #，保留从第一个 # 开始，避免模型在前面添加说明
+            if "#" in md_text and not md_text.lstrip().startswith('#'):
                 start_hash = md_text.find('#')
                 if start_hash != -1:
                     md_text = md_text[start_hash:]
+            md_text = md_text.strip()
+            # 结束：返回标准化后的摘要文本
             
             return (batch_idx, md_text, None)
         
@@ -147,33 +186,39 @@ def main(input_articles_file, output_md=None, progress_callback=None):
     # 从.env文件加载环境变量
     load_dotenv()
     
-    api_key = os.getenv("Volcengine_API_KEY")
-    model_id = os.getenv("Volcengine_MODEL_ID")
-    base_url = os.getenv("Volcengine_BASE_URL")
+    # 使用 Gemini 端点与模型（OpenAI 兼容接口）。
+    # 模型：优先从 Gemini_ABSTRACT_MODEL_ID 读取；未设置则回退到 Gemini_MODEL_ID；仍未设置则默认 gemini-2.5-flash。
+    api_key = os.getenv("Gemini_API_KEY")
+    model_id = (
+        os.getenv("Gemini_ABSTRACT_MODEL_ID")
+        or os.getenv("Gemini_MODEL_ID")
+        or "gemini-2.5-flash"
+    )
+    base_url = os.getenv("Gemini_BASE_URL")
     
-    # 固定max_workers为20
-    max_workers = 20
+    # 并发线程数，可通过环境变量覆盖，默认20
+    try:
+        max_workers = int(os.getenv("ABSTRACT_MAX_WORKERS", "20"))
+    except ValueError:
+        max_workers = 20
     batch_size = max_workers
     
     if not api_key:
-        message = "未找到API_KEY环境变量，请检查.env文件！"
+        message = "未找到 Gemini_API_KEY 环境变量，请检查 .env 文件！"
         print(message)
         if progress_callback:
             progress_callback(message)
         sys.exit(1)
-        
-    if not model_id:
-        message = "未找到MODEL_ID环境变量，请检查.env文件！"
+    
+    if not base_url:
+        message = "未找到 Gemini_BASE_URL 环境变量，请检查 .env 文件！"
         print(message)
         if progress_callback:
             progress_callback(message)
         sys.exit(1)
 
     # 初始化客户端
-    client = OpenAI(
-        base_url=base_url,
-        api_key=api_key,
-    )
+    client = OpenAI(base_url=base_url, api_key=api_key)
 
     # 读取包含文章路径的文件
     if not os.path.exists(input_articles_file):
@@ -249,7 +294,7 @@ def main(input_articles_file, output_md=None, progress_callback=None):
 
     # 按照原先顺序 (idx) 排序并合并所有 Markdown
     results.sort(key=lambda x: x[0])
-    merged_md = "\n\n".join(r[1] for r in results if r[1])
+    merged_md = "\n\n".join((r[1].strip() if r[1] else "") for r in results if r[1] and r[1].strip())
 
     if not merged_md.strip():
         empty_message = "未获取到任何有效内容，程序结束。"

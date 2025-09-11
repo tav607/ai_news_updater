@@ -66,15 +66,14 @@ WECHAT_CATEGORY_ID="where_you_put_your_wechat_rss"
 # Defaults to "wechat" if not set.
 WECHAT_URL_PATTERN_CONTAINS="wechat2rss_or_other_service_provider"
 
-# Volcengine service configuration (for abstract generation)
-Volcengine_API_KEY="YOUR_VOLCENGINE_API_KEY"
-Volcengine_MODEL_ID="YOUR_VOLCENGINE_MODEL_ID"
-Volcengine_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
-
-# Google service configuration (for weekly summary)
+# Gemini service configuration (used for abstracts and summary)
 Gemini_API_KEY="YOUR_GEMINI_API_KEY"
-Gemini_MODEL_ID="YOUR_GEMINI_MODEL_ID"
 Gemini_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/"
+# Models per step
+# Article → Abstract uses gemini-2.5-flash
+Gemini_ABSTRACT_MODEL_ID="gemini-2.5-flash"
+# Abstract → Summary uses gemini-2.5-pro
+Gemini_SUMMARY_MODEL_ID="gemini-2.5-pro"
 
 ## --- Dropbox Configuration (for file upload) ---
 DROPBOX_APP_KEY="YOUR_DROPBOX_APP_KEY"

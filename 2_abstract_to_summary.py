@@ -57,10 +57,14 @@ def main():
         abstract_md = f.read()
     load_dotenv()
     api_key = os.getenv("Gemini_API_KEY")
-    model_id = os.getenv("Gemini_MODEL_ID")
+    # 模型：优先从 Gemini_SUMMARY_MODEL_ID 读取；未设置则回退到 Gemini_MODEL_ID；仍未设置则默认 gemini-2.5-pro。
+    model_id = os.getenv("Gemini_SUMMARY_MODEL_ID") or os.getenv("Gemini_MODEL_ID") or "gemini-2.5-pro"
     base_url = os.getenv("Gemini_BASE_URL")
-    if not api_key or not model_id:
-        print("Missing Gemini_API_KEY or Gemini_MODEL_ID in environment.")
+    if not api_key:
+        print("Missing Gemini_API_KEY in environment.")
+        sys.exit(1)
+    if not base_url:
+        print("Missing Gemini_BASE_URL in environment.")
         sys.exit(1)
     client = OpenAI(api_key=api_key, base_url=base_url)
     print("Generating summary...")
