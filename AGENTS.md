@@ -46,6 +46,7 @@
 ## Security & Configuration Tips
 - Never commit secrets; keep `.env` local. Update `.env.example` for new keys.
 - Required envs: FreshRSS `DB_PATH`, `ALLOWED_FEED_NAMES`, Gemini keys (`Gemini_API_KEY`, `Gemini_BASE_URL`), and per-step models (`Gemini_ABSTRACT_MODEL_ID`, `Gemini_SUMMARY_MODEL_ID`), plus Dropbox creds.
-- AI provider: Gemini via OpenAI-compatible endpoint (`chat.completions`), abstracts use `gemini-2.5-flash`, summary uses `gemini-2.5-pro`.
+- AI provider: Gemini via OpenAI-compatible endpoint (`chat.completions`), abstracts use `gemini-3-flash-preview`, summary uses `gemini-3-pro-preview`.
+- Upload: Supports rclone (priority) or Dropbox API. Set `RCLONE_MD_DEST`/`RCLONE_PDF_DEST` to use rclone.
 - Concurrency: abstract generation defaults to 20 threads; optionally tune with `ABSTRACT_MAX_WORKERS` if rate-limited.
 - Review outputs in `deliverable/` before upload; rotate tokens if leaked; redact tokens in logs (`cron_log.txt`).

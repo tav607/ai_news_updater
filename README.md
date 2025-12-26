@@ -9,7 +9,7 @@ This tool automatically extracts AI-related articles from a FreshRSS SQLite data
 - Merge abstracts to produce a weekly summary Markdown file
 - Convert Markdown documents to PDF
 - Support parallel processing for improved performance
-- Automatically upload summary Markdown and PDF files to the root of the Dropbox App folder
+- Automatically upload summary Markdown and PDF files via rclone or Dropbox API
 
 ## Requirements
 
@@ -69,13 +69,19 @@ WECHAT_URL_PATTERN_CONTAINS="wechat2rss_or_other_service_provider"
 # Gemini service configuration (used for abstracts and summary)
 Gemini_API_KEY="YOUR_GEMINI_API_KEY"
 Gemini_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/"
-# Models per step
-# Article → Abstract uses gemini-2.5-flash
-Gemini_ABSTRACT_MODEL_ID="gemini-2.5-flash"
-# Abstract → Summary uses gemini-2.5-pro
-Gemini_SUMMARY_MODEL_ID="gemini-2.5-pro"
+# Models per step (supports Gemini 2.5 and 3 series)
+# Article → Abstract
+Gemini_ABSTRACT_MODEL_ID="gemini-3-flash-preview"
+# Abstract → Summary
+Gemini_SUMMARY_MODEL_ID="gemini-3-pro-preview"
 
-## --- Dropbox Configuration (for file upload) ---
+## --- Upload Configuration (choose one method) ---
+# Option 1: rclone (recommended if already configured)
+# Set destination paths for md and pdf files (format: remote:path)
+# RCLONE_MD_DEST="dropbox:/path/to/markdown"
+# RCLONE_PDF_DEST="dropbox:/path/to/pdf"
+
+# Option 2: Dropbox API (used if rclone not configured)
 DROPBOX_APP_KEY="YOUR_DROPBOX_APP_KEY"
 DROPBOX_APP_SECRET="YOUR_DROPBOX_APP_SECRET"
 DROPBOX_REFRESH_TOKEN="YOUR_DROPBOX_REFRESH_TOKEN"
@@ -83,7 +89,27 @@ DROPBOX_REFRESH_TOKEN="YOUR_DROPBOX_REFRESH_TOKEN"
 
 Ensure the environment variables are correctly set before running any script.
 
-### Dropbox Setup
+### Upload Setup
+
+You can choose between two upload methods:
+
+#### Option 1: rclone (Recommended)
+
+If you have rclone configured, this is the simpler option as it doesn't require Dropbox API credentials.
+
+1. Install and configure rclone:
+   ```bash
+   rclone config
+   ```
+2. Add the destination paths to your `.env` file:
+   ```dotenv
+   RCLONE_MD_DEST="dropbox:/path/to/markdown"
+   RCLONE_PDF_DEST="dropbox:/path/to/pdf"
+   ```
+
+When `RCLONE_MD_DEST` or `RCLONE_PDF_DEST` is set, the script will use rclone instead of the Dropbox API.
+
+#### Option 2: Dropbox API
 
 To enable Dropbox uploads, follow these steps to obtain your API credentials:
 
