@@ -187,12 +187,12 @@ def main(input_articles_file, output_md=None, progress_callback=None):
     load_dotenv()
     
     # 使用 Gemini 端点与模型（OpenAI 兼容接口）。
-    # 模型：优先从 Gemini_ABSTRACT_MODEL_ID 读取；未设置则回退到 Gemini_MODEL_ID；仍未设置则默认 gemini-2.5-flash。
+    # 模型：优先从 Gemini_ABSTRACT_MODEL_ID 读取；未设置则回退到 Gemini_MODEL_ID；仍未设置则默认 gemini-3-flash-preview。
     api_key = os.getenv("Gemini_API_KEY")
     model_id = (
         os.getenv("Gemini_ABSTRACT_MODEL_ID")
         or os.getenv("Gemini_MODEL_ID")
-        or "gemini-2.5-flash"
+        or "gemini-3-flash-preview"
     )
     base_url = os.getenv("Gemini_BASE_URL")
     

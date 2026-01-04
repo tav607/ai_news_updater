@@ -1,0 +1,20 @@
+[project]
+name = "ai-news-update"
+version = "1.0.0"
+description = "AI News Summary Tool - Extract AI news from FreshRSS, generate abstracts and summaries using Gemini"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4>=4.12.2",
+    "openai",
+    "python-dotenv>=1.0.1",
+    "markdown>=3.5.1",
+    "weasyprint",
+    "dropbox",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]

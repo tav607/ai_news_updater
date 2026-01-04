@@ -30,8 +30,6 @@ cron_log.txt
 # Ignore contents but keep directories with .gitkeep
 abstract_md/*
 !abstract_md/.gitkeep
-url/*
-!url/.gitkeep
 deliverable/*
 !deliverable/.gitkeep
 articles/*
