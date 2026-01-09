@@ -7,6 +7,7 @@ Usage:
 """
 import os
 import sys
+import re
 import argparse
 import time
 from datetime import datetime
@@ -48,6 +49,54 @@ def generate_summary(client, model_id, markdown_content):
     print("Max retries reached, exiting.")
     sys.exit(1)
 
+def clean_abstract_md(content):
+    """Clean abstract markdown: remove skip markers and deduplicate articles."""
+    lines = content.split('\n')
+    cleaned_lines = []
+    seen_keys = set()  # Track both titles and URLs
+    current_article = []
+    current_key = None
+
+    for line in lines:
+        # Skip lines containing skip markers
+        if '[跳过：' in line or '[跳过:' in line:
+            continue
+
+        # Detect article title with URL: ### [...](url)
+        url_match = re.match(r'^### \[(.+?)\]\((.+?)\)\s*$', line)
+        # Detect article title without URL: ### title
+        title_only_match = re.match(r'^### (.+?)\s*$', line) if not url_match else None
+
+        if url_match or title_only_match:
+            # Save previous article if exists and not duplicate
+            if current_key and current_key not in seen_keys:
+                cleaned_lines.extend(current_article)
+                seen_keys.add(current_key)
+
+            # Start new article - use URL as key if available, otherwise title
+            if url_match:
+                url = url_match.group(2).strip()
+                current_key = url  # Dedupe by URL
+            else:
+                current_key = title_only_match.group(1).strip()  # Dedupe by title
+            current_article = [line]
+        else:
+            if current_key is not None:
+                current_article.append(line)
+            else:
+                # Lines before first article header
+                cleaned_lines.append(line)
+
+    # Don't forget the last article
+    if current_key and current_key not in seen_keys:
+        cleaned_lines.extend(current_article)
+
+    # Remove consecutive empty lines (keep at most 2)
+    result = '\n'.join(cleaned_lines)
+    result = re.sub(r'\n{3,}', '\n\n', result)
+    return result.strip()
+
+
 def main():
     args = parse_args()
     if not os.path.exists(args.input_md):
@@ -55,6 +104,10 @@ def main():
         sys.exit(1)
     with open(args.input_md, "r", encoding="utf-8") as f:
         abstract_md = f.read()
+
+    # Clean abstract: remove skip markers and deduplicate
+    abstract_md = clean_abstract_md(abstract_md)
+    print(f"Cleaned abstract markdown")
     load_dotenv()
     api_key = os.getenv("Gemini_API_KEY")
     # 模型：优先从 Gemini_SUMMARY_MODEL_ID 读取；未设置则回退到 Gemini_MODEL_ID；仍未设置则默认 gemini-3-pro-preview。

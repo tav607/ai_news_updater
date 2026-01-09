@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Ensure uv is in PATH (for cron environment)
+export PATH="$HOME/.local/bin:$PATH"
+
 # Usage message
 print_usage() { echo "Usage: $0 [--db <DB_PATH>] [--api] [--hours <hours>] [--end-hour <end_hour>]"; exit 1; }
 
